@@ -1,0 +1,8 @@
+confluent-kafka
+elasticsearch
+redis
+pydantic
+loguru
+python-dotenv
+scapy
+pyshark
