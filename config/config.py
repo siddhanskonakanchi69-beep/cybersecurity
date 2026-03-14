@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
 # ─── Kafka ────────────────────────────────────────────────────────────────────
-KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
+KAFKA_BOOTSTRAP_SERVERS: str = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:29092")
 KAFKA_GROUP_ID: str          = os.getenv("KAFKA_GROUP_ID", "cyberdefense-agents")
 
 # Kafka Topics

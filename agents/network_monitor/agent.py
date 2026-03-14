@@ -245,7 +245,7 @@ class NetworkMonitorAgent:
                 self.alerted_exfil.clear()
 
     def run(self) -> None:
-        print(f"{Fore.GREEN}[NetworkMonitorAgent] Starting on interface '{IFACE}' → Kafka:{KAFKA_BOOTSTRAP}/{KAFKA_TOPIC}{Style.RESET_ALL}")
+        print(f"{Fore.GREEN}[NetworkMonitorAgent] Starting on interface '{IFACE}' -> Kafka:{KAFKA_BOOTSTRAP}/{KAFKA_TOPIC}{Style.RESET_ALL}")
 
         reset_thread = threading.Thread(target=self._reset_alerted_loop, daemon=True)
         reset_thread.start()

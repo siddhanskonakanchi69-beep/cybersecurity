@@ -3,8 +3,9 @@ Response & Mitigation Agent
 Consumes classified threats and executes automated playbooks.
 Actions: block IP, isolate host, revoke credentials, alert admins.
 """
-import json, os
+import json, os, subprocess, time
 import httpx
+import redis
 from loguru import logger
 from dotenv import load_dotenv
 
@@ -21,20 +22,102 @@ AUTO_ISOLATE_HOST = os.getenv("AUTO_ISOLATE_HOST", "false").lower() == "true"
 WEBHOOK_URL       = os.getenv("ALERT_WEBHOOK_URL", "")
 CONFIDENCE_GATE   = float(os.getenv("MODEL_CONFIDENCE_THRESHOLD", 0.85))
 
+# Redis connection for blocklist persistence
+REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
+REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
+REDIS_DB   = int(os.getenv("REDIS_DB", 0))
+
+try:
+    rdb = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+    rdb.ping()
+    logger.info("Connected to Redis for blocklist persistence")
+except Exception:
+    rdb = None
+    logger.warning("Redis unavailable - blocklist will be firewall-only")
+
 
 # ─── Playbook Actions ──────────────────────────────────────────────────────────
 
 def block_ip(ip: str) -> dict:
-    """Add IP to firewall blocklist (stub — wire to your firewall API)."""
-    logger.warning(f"🚫 BLOCKING IP: {ip}")
-    # Example: call iptables API or cloud WAF
-    # subprocess.run(["iptables", "-A", "INPUT", "-s", ip, "-j", "DROP"])
-    return {"action": "block_ip", "target": ip, "status": "executed"}
+    """Block an IP using Windows Firewall and add it to Redis blocklist."""
+    rule_name = f"CyberDefense-Block-{ip}"
+
+    # Check if already blocked (avoid duplicates)
+    if rdb and rdb.sismember("blocked_ips", ip):
+        logger.info(f"IP {ip} is already blocked - skipping")
+        return {"action": "block_ip", "target": ip, "status": "already_blocked"}
+
+    # Block via Windows Firewall (inbound)
+    try:
+        result = subprocess.run(
+            ["netsh", "advfirewall", "firewall", "add", "rule",
+             f"name={rule_name}", "dir=in", "action=block",
+             f"remoteip={ip}"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            logger.warning(f"BLOCKED IP via Windows Firewall: {ip}")
+            status = "executed"
+        else:
+            logger.error(f"Firewall block failed for {ip}: {result.stderr}")
+            status = "firewall_error"
+    except Exception as e:
+        logger.error(f"Firewall command failed: {e}")
+        status = "firewall_error"
+
+    # Persist to Redis blocklist
+    if rdb:
+        rdb.sadd("blocked_ips", ip)
+        rdb.hset(f"blocked_ip:{ip}", mapping={
+            "blocked_at": str(int(time.time())),
+            "rule_name": rule_name,
+            "status": status,
+        })
+
+    return {"action": "block_ip", "target": ip, "status": status}
+
+
+def unblock_ip(ip: str) -> dict:
+    """Remove an IP block from Windows Firewall and Redis."""
+    rule_name = f"CyberDefense-Block-{ip}"
+    try:
+        subprocess.run(
+            ["netsh", "advfirewall", "firewall", "delete", "rule",
+             f"name={rule_name}"],
+            capture_output=True, text=True, timeout=10
+        )
+        logger.info(f"UNBLOCKED IP: {ip}")
+    except Exception as e:
+        logger.error(f"Unblock failed: {e}")
+
+    if rdb:
+        rdb.srem("blocked_ips", ip)
+        rdb.delete(f"blocked_ip:{ip}")
+
+    return {"action": "unblock_ip", "target": ip, "status": "executed"}
 
 
 def isolate_host(host: str) -> dict:
-    """Isolate host to quarantine VLAN (stub — wire to your SDN/switch API)."""
-    logger.warning(f"🔒 ISOLATING HOST: {host}")
+    """Block all traffic from a host via Windows Firewall."""
+    rule_name = f"CyberDefense-Isolate-{host}"
+    logger.warning(f"ISOLATING HOST: {host}")
+    try:
+        subprocess.run(
+            ["netsh", "advfirewall", "firewall", "add", "rule",
+             f"name={rule_name}", "dir=in", "action=block",
+             f"remoteip={host}"],
+            capture_output=True, text=True, timeout=10
+        )
+        # Also block outbound
+        subprocess.run(
+            ["netsh", "advfirewall", "firewall", "add", "rule",
+             f"name={rule_name}-out", "dir=out", "action=block",
+             f"remoteip={host}"],
+            capture_output=True, text=True, timeout=10
+        )
+    except Exception as e:
+        logger.error(f"Isolate failed: {e}")
+        return {"action": "isolate_host", "target": host, "status": "error"}
     return {"action": "isolate_host", "target": host, "status": "executed"}
 
 

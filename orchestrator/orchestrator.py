@@ -1,10 +1,15 @@
 import time
 import json
 import threading
+import sys
+import os
 from collections import defaultdict, deque
 from uuid import uuid4
+from dotenv import load_dotenv
 
-from kill_chain import analyze_kill_chain_progression
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', 'config', 'config.env'))
+
+from .kill_chain import analyze_kill_chain_progression
 
 
 SEVERITY_SCORES = {
@@ -101,3 +106,34 @@ class OrchestratorAgent:
 
         print("\n=== INCIDENT DETECTED ===")
         print(json.dumps(incident, indent=2))
+
+    def run(self):
+        print("[Orchestrator] Starting and listening for alerts...")
+        
+        try:
+            from shared.utils.kafka_client import get_consumer
+            consumer = get_consumer(["alerts.network", "alerts.logs", "alerts.ueba", "alerts.vuln"], group_id="orchestrator-group")
+        except Exception as e:
+            print(f"[Orchestrator] Failed to import kafka consumer. Running in mock mode. Error: {e}")
+            return
+
+        while self.running:
+            msg = consumer.poll(1.0)
+            if msg is None:
+                continue
+            if msg.error():
+                print(f"[Orchestrator] Kafka error: {msg.error()}")
+                continue
+            
+            try:
+                alert = json.loads(msg.value().decode('utf-8'))
+                self.process_alert(alert)
+            except Exception as e:
+                print(f"[Orchestrator] JSON parse error: {e}")
+
+if __name__ == "__main__":
+    agent = OrchestratorAgent()
+    try:
+        agent.run()
+    except KeyboardInterrupt:
+        print("\n[Orchestrator] Shutting down...")

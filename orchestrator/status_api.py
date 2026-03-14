@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
-from orchestrator import OrchestratorAgent
-from response_dispatcher import ResponseDispatcher
+from .orchestrator import OrchestratorAgent
+from .response_dispatcher import ResponseDispatcher
 
 app = FastAPI()
 
