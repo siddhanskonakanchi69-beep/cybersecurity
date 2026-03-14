@@ -1,0 +1,59 @@
+{
+  "isolation_forest": {
+    "precision": 0.994269340974212,
+    "recall": 0.1892776435751578,
+    "f1": 0.3180151872217858
+  },
+  "random_forest": {
+    "accuracy": 0.7519960965223563,
+    "top_features": [
+      {
+        "feature": "src_bytes",
+        "importance": 0.11099092770970069
+      },
+      {
+        "feature": "flag_SF",
+        "importance": 0.06168990539296279
+      },
+      {
+        "feature": "same_srv_rate",
+        "importance": 0.06048705502538163
+      },
+      {
+        "feature": "dst_host_srv_serror_rate",
+        "importance": 0.05697950004866665
+      },
+      {
+        "feature": "diff_srv_rate",
+        "importance": 0.04960555231590901
+      },
+      {
+        "feature": "dst_host_serror_rate",
+        "importance": 0.04480643738866949
+      },
+      {
+        "feature": "count",
+        "importance": 0.04278070632864193
+      },
+      {
+        "feature": "dst_host_same_srv_rate",
+        "importance": 0.040507323652329896
+      },
+      {
+        "feature": "dst_host_srv_count",
+        "importance": 0.03888932980101469
+      },
+      {
+        "feature": "dst_host_diff_srv_rate",
+        "importance": 0.03801648864255722
+      }
+    ]
+  },
+  "gradient_boost": {
+    "accuracy": 0.8163147622427254,
+    "precision": 0.9708559046587215,
+    "recall": 0.6982778773474636,
+    "f1": 0.8123102026016408,
+    "roc_auc": 0.9384717036610358
+  }
+}

@@ -1,0 +1,14 @@
+# Python stuff
+.venv/
+__pycache__/
+*.pyc
+
+# ML Models & Data (Keep these local!)
+ml_models/models/*.pkl
+ml_models/models/*.json
+*.csv
+*.zip
+
+# IDE
+.idea/
+.vscode/
