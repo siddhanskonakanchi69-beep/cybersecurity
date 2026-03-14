@@ -12,7 +12,7 @@ ES_HOST = os.getenv("ES_HOST", "http://localhost:9200")
 
 
 def get_es_client() -> Elasticsearch:
-    return Elasticsearch(ES_HOST)
+    return Elasticsearch(ES_HOST, api_key=None)
 
 
 def index_event(es: Elasticsearch, index: str, event: dict) -> None:

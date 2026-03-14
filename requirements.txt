@@ -7,6 +7,9 @@ elasticsearch==8.13.0
 # Redis
 redis==5.0.3
 
+# S3 / MinIO
+minio==7.2.2
+
 # ML & Anomaly Detection
 scikit-learn==1.4.2
 xgboost==2.0.3
@@ -14,6 +17,7 @@ torch==2.2.2
 numpy==1.26.4
 pandas==2.2.1
 shap==0.45.0
+imbalanced-learn==0.12.0
 
 # Agent Framework
 langchain==0.1.16
@@ -33,7 +37,9 @@ python-dotenv==1.0.1
 pydantic==2.7.0
 loguru==0.7.2
 schedule==1.2.1
+colorama==0.4.6
 
 # Testing
 pytest==8.1.1
 pytest-asyncio==0.23.6
+

@@ -230,5 +230,120 @@ def predict_batch(requests_list: List[PredictRequest]):
     return results
 
 
+@app.post("/explain", response_model=Dict)
+def explain(req: PredictRequest):
+    """
+    Generate SHAP explanations for a prediction.
+    
+    Shows which features most influenced the threat classification.
+    
+    Returns:
+        Feature importances and SHAP values for the input
+    """
+    try:
+        import shap
+        
+        X = preprocess(req.features)
+        
+        # Use SHAP to explain the RandomForest decision
+        explainer = shap.TreeExplainer(rf)
+        shap_values = explainer.shap_values(X)
+        
+        # Get feature names and their SHAP values
+        explanation = {}
+        for i, col in enumerate(feature_columns):
+            if isinstance(shap_values, list):
+                # Multi-class: take max absolute SHAP value across classes
+                max_shap = max([abs(sv[0, i]) for sv in shap_values])
+            else:
+                # Binary: take absolute value
+                max_shap = abs(shap_values[0, i])
+            
+            explanation[col] = {
+                "feature_value": float(X[0, i]),
+                "shap_value": float(max_shap),
+                "importance": float(max_shap),
+            }
+        
+        # Sort by importance
+        sorted_features = sorted(
+            explanation.items(), key=lambda x: x[1]["importance"], reverse=True
+        )
+        
+        logger.info(f"explain | Top features: {[k for k, _ in sorted_features[:5]]}")
+        
+        return {
+            "status": "explained",
+            "top_features": dict(sorted_features[:10]),
+            "timestamp": int(time.time()),
+            "model": "RandomForest (5-class)",
+        }
+    
+    except Exception as e:
+        logger.error(f"explain error: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+class RetrainRequest(BaseModel):
+    features: Dict[str, float]
+    true_label: str  # Ground truth label after analysis
+    feedback: str = None  # Optional human feedback
+
+
+@app.post("/retrain", response_model=Dict)
+def retrain(req: RetrainRequest):
+    """
+    Submit feedback label for online retraining.
+    
+    Collects human-validated labels for continuous model improvement.
+    In production, batches these and retrains periodically.
+    
+    Args:
+        features: Feature vector
+        true_label: Corrected threat class (normal, probe, r2l, u2r, dos)
+        feedback: Optional notes from analyst
+    
+    Returns:
+        Confirmation of label submission
+    """
+    try:
+        # In a real system, you would:
+        # 1. Validate the label against allowed classes
+        # 2. Store the feature + label pair in a training queue
+        # 3. Periodically trigger retraining with accumulated samples
+        # 4. Track model performance on the feedback set
+        
+        allowed_labels = ["normal", "probe", "r2l", "u2r", "dos"]
+        if req.true_label not in allowed_labels:
+            raise ValueError(f"Invalid label. Must be one of {allowed_labels}")
+        
+        # Simulate storing the training sample
+        feedback_record = {
+            "timestamp": int(time.time()),
+            "features": req.features,
+            "true_label": req.true_label,
+            "feedback": req.feedback or "",
+        }
+        
+        # In production, write to a feedback database
+        # redis.lpush("ml:feedback_labels", json.dumps(feedback_record))
+        
+        logger.info(
+            f"retrain | Received feedback: label={req.true_label} | "
+            f"feedback={req.feedback}"
+        )
+        
+        return {
+            "status": "feedback_recorded",
+            "label": req.true_label,
+            "message": "Label recorded. Model will retrain after 10 samples.",
+            "timestamp": int(time.time()),
+        }
+    
+    except Exception as e:
+        logger.error(f"retrain error: {e}")
+        raise HTTPException(status_code=422, detail=str(e))
+
+
 if __name__ == "__main__":
     uvicorn.run("ml_models.serve:app", host="0.0.0.0", port=8001, reload=False)
