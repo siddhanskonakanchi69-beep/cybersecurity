@@ -1,0 +1,37 @@
+// proto/threat_report.proto
+// Generate Python bindings with:
+//   pip install grpcio-tools
+//   python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. proto/threat_report.proto
+// Or without gRPC:
+//   pip install protobuf
+//   protoc -I. --python_out=. proto/threat_report.proto
+
+syntax = "proto3";
+
+package cybersec;
+
+enum Severity {
+  UNKNOWN  = 0;
+  LOW      = 1;
+  MEDIUM   = 2;
+  HIGH     = 3;
+  CRITICAL = 4;
+}
+
+message ThreatReport {
+  string   agent_id             = 1;
+  int64    timestamp            = 2;   // Unix epoch seconds
+  Severity severity             = 3;
+  string   threat_type          = 4;
+  string   source_ip            = 5;
+  string   destination_ip       = 6;
+  string   mitre_technique_id   = 7;
+  string   mitre_technique_name = 8;
+  string   description          = 9;
+  string   raw_evidence         = 10;
+  string   recommended_action   = 11;
+}
+
+message ThreatReportBatch {
+  repeated ThreatReport reports = 1;
+}
