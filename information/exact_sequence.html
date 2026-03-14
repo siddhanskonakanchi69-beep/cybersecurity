@@ -1,0 +1,288 @@
+
+<style>
+.seq { padding: 0.5rem 0; }
+.step { display: flex; gap: 0; margin-bottom: 3px; align-items: stretch; }
+.step-num { width: 32px; flex-shrink: 0; font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); padding-top: 10px; text-align: right; padding-right: 8px; }
+.step-line { display: flex; flex-direction: column; align-items: center; width: 20px; flex-shrink: 0; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 8px; }
+.vline { width: 1px; background: var(--color-border-tertiary); flex: 1; min-height: 8px; }
+.step-body { flex: 1; padding: 6px 0 6px 10px; }
+.step-title { font-size: 13px; font-weight: 500; color: var(--color-text-primary); line-height: 1.4; }
+.step-sub { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; line-height: 1.5; }
+.who { display: inline-block; font-size: 11px; font-weight: 500; padding: 1px 6px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+.a { background: var(--color-background-info); color: var(--color-text-info); }
+.b { background: var(--color-background-success); color: var(--color-text-success); }
+.c { background: var(--color-background-warning); color: var(--color-text-warning); }
+.d { background: #EEEDFE; color: #534AB7; }
+.gate { display: flex; align-items: center; gap: 8px; margin: 10px 0 10px 52px; padding: 6px 12px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); }
+.gate-text { font-size: 12px; font-weight: 500; color: var(--color-text-primary); }
+.gate-sub { font-size: 11px; color: var(--color-text-secondary); }
+.dot-a { background: #378ADD; }
+.dot-b { background: #639922; }
+.dot-c { background: #BA7517; }
+.dot-d { background: #7F77DD; }
+.dot-gate { background: var(--color-border-primary); }
+.section-header { font-size: 11px; font-weight: 500; color: var(--color-text-tertiary); letter-spacing: 0.06em; margin: 16px 0 6px 52px; }
+</style>
+<div class="seq">
+
+<div class="section-header">PHASE 0 — A SETS UP (everyone waits, ~30 min)</div>
+
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-line"><div class="dot dot-a"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who a">A</span>Run setup_project.sh — creates full folder structure</div>
+    <div class="step-sub">bash setup_project.sh → verify with: find cyberdefense -type f | sort</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-line"><div class="dot dot-a"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who a">A</span>Write config/config.py and config/.env</div>
+    <div class="step-sub">Verify: python -c "from config.config import *; print('config OK')"</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-line"><div class="dot dot-a"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who a">A</span>Push config.py and folder structure to GitHub</div>
+    <div class="step-sub">git add . && git commit -m "scaffold" && git push — everyone pulls now</div>
+  </div>
+</div>
+
+<div class="gate">
+  <div>
+    <div class="gate-text">GATE 1 — everyone pulls the repo</div>
+    <div class="gate-sub">B, C, D cannot start until config.py is on GitHub. This takes ~30 min max.</div>
+  </div>
+</div>
+
+<div class="section-header">PHASE 1 — ALL 4 WORK IN PARALLEL (~60 min)</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-line"><div class="dot dot-a"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who a">A</span>Write and start docker-compose.yml</div>
+    <div class="step-sub">docker compose up -d → wait for all healthchecks to pass</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-line"><div class="dot dot-b"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who b">B</span>Write proto/threat_report.proto</div>
+    <div class="step-sub">The schema contract — must be committed before writing any agent code</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-line"><div class="dot dot-c"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who c">C</span>Run download_data.py — download NSL-KDD dataset</div>
+    <div class="step-sub">Runs in background, takes ~5 min. Start this first before writing any code.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-line"><div class="dot dot-d"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who d">D</span>Write the pitch script (Task 5) — zero dependencies</div>
+    <div class="step-sub">Completely independent. Write and rehearse while others code.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-line"><div class="dot dot-b"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who b">B</span>Write config/mitre_mapping.py</div>
+    <div class="step-sub">Required by base_agent.py. Commit when done.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-line"><div class="dot dot-c"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who c">C</span>Write feature_engineering.py while data downloads</div>
+    <div class="step-sub">No execution needed yet — just write the code</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-line"><div class="dot dot-d"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who d">D</span>Write orchestrator/kill_chain.py</div>
+    <div class="step-sub">No Kafka/ES needed. Pure Python logic. Commit when done.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-line"><div class="dot dot-b"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who b">B</span>Write agents/base_agent.py</div>
+    <div class="step-sub">Imports from config.config and mitre_mapping. Commit when done.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-line"><div class="dot dot-c"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who c">C</span>Run train.py — trains all 3 models</div>
+    <div class="step-sub">Takes 5–8 min. Start this the moment download_data.py finishes.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-line"><div class="dot dot-d"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who d">D</span>Write orchestrator/response_dispatcher.py</div>
+    <div class="step-sub">Imports from config.config only. No Kafka needed yet.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-line"><div class="dot dot-a"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who a">A</span>Write and run verify_infra.py</div>
+    <div class="step-sub">Creates Kafka topics + ES indices. Must show all green before agents start.</div>
+  </div>
+</div>
+
+<div class="gate">
+  <div>
+    <div class="gate-text">GATE 2 — verify_infra.py shows all green</div>
+    <div class="gate-sub">Kafka topics exist. ES indices exist. Redis up. Kibana up. B and D need this to test.</div>
+  </div>
+</div>
+
+<div class="section-header">PHASE 2 — AGENTS + MODELS + ORCHESTRATOR (~60 min)</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-line"><div class="dot dot-b"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who b">B</span>Write network_monitor/agent.py</div>
+    <div class="step-sub">Inherits BaseAgent. Run standalone: python -m agents.network_monitor.agent</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-line"><div class="dot dot-c"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who c">C</span>Write and start serve.py — ML API on port 8001</div>
+    <div class="step-sub">python ml_models/serve.py → verify: curl http://localhost:8001/health</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">8</div>
+  <div class="step-line"><div class="dot dot-d"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who d">D</span>Write orchestrator/orchestrator.py</div>
+    <div class="step-sub">Do NOT run yet — needs at least one agent publishing to Kafka first</div>
+  </div>
+</div>
+
+<div class="gate">
+  <div>
+    <div class="gate-text">GATE 3 — C confirms port 8001 /health returns OK</div>
+    <div class="gate-sub">Announce to team: "ML service is live." B's agents now get real anomaly scores.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">9</div>
+  <div class="step-line"><div class="dot dot-b"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who b">B</span>Write log_analyzer/agent.py</div>
+    <div class="step-sub">Run alongside network monitor. Both publish to Kafka simultaneously.</div>
+  </div>
+</div>
+
+<div class="gate">
+  <div>
+    <div class="gate-text">GATE 4 — B confirms network_monitor agent is publishing to Kafka</div>
+    <div class="gate-sub">Verify: kafka-console-consumer.sh --topic network-monitor-alerts --from-beginning<br>D can now start and test the orchestrator consumer loop.</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">10</div>
+  <div class="step-line"><div class="dot dot-d"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who d">D</span>Start orchestrator.py and verify it receives alerts</div>
+    <div class="step-sub">python -m orchestrator.orchestrator — watch console for correlated incidents</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">10</div>
+  <div class="step-line"><div class="dot dot-c"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who c">C</span>Run test_api.py — verify /predict returns full response</div>
+    <div class="step-sub">Confirms B's agents will get valid scores. Fix any schema mismatches now.</div>
+  </div>
+</div>
+
+<div class="section-header">PHASE 3 — WIRE EVERYTHING + DEMO PREP (~30 min)</div>
+
+<div class="step">
+  <div class="step-num">11</div>
+  <div class="step-line"><div class="dot dot-d"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who d">D</span>Write and start status_api.py on port 8002</div>
+    <div class="step-sub">verify: curl http://localhost:8002/status</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">11</div>
+  <div class="step-line"><div class="dot dot-b"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who b">B</span>Write and run demo/trigger_attacks.sh</div>
+    <div class="step-sub">bash demo/trigger_attacks.sh — confirm each attack triggers an alert in the agent terminals</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">12</div>
+  <div class="step-line"><div class="dot dot-gate" style="background:#E24B4A"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title">FULL TEAM — end-to-end smoke test</div>
+    <div class="step-sub">Run trigger_attacks.sh → watch agent terminals → watch orchestrator terminal → confirm incident in ES → confirm blocked IP in Redis</div>
+  </div>
+</div>
+
+<div class="step">
+  <div class="step-num">13</div>
+  <div class="step-line"><div class="dot dot-d"></div><div class="vline"></div></div>
+  <div class="step-body">
+    <div class="step-title"><span class="who d">D</span>Open pitch deck, do one full rehearsal with team</div>
+    <div class="step-sub">At 1:00 PM sharp. Everyone stops coding. D presents, B runs demo commands.</div>
+  </div>
+</div>
+
+<div class="gate">
+  <div>
+    <div class="gate-text">1:20 PM — laptops open, terminals ready, pitch deck on screen</div>
+    <div class="gate-sub">Review 1 is at 1:30 PM</div>
+  </div>
+</div>
+
+</div>

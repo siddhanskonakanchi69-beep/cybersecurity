@@ -1,0 +1,1617 @@
+Here are all four fully repaired prompts, ready to paste.
+
+---
+
+## Person A — Infra + DevOps
+
+```
+I am building a Multi-Agent Cybersecurity Defense System for a hackathon.
+I am Person A — my only job is infrastructure, project scaffolding, and
+making sure every other team member can start working immediately.
+I have 30 minutes for the first two tasks, then I move to verification.
+
+CRITICAL RULE: I do NOT write any agent code, base classes, or ML code.
+My job ends at the infrastructure boundary. Everything I produce is
+consumed by Persons B, C, and D as a foundation.
+
+TEAM CONTEXT:
+- Person B: builds sensor agents and the shared base class
+- Person C: builds ML models and serves them on port 8001
+- Person D: builds the orchestrator and pitch
+- I (Person A): infra, docker, config, verification only
+
+════════════════════════════════════════
+TASK 1 — PROJECT STRUCTURE (do this first, takes 15 min)
+════════════════════════════════════════
+
+Generate a single bash script called setup_project.sh that creates
+this EXACT folder and file structure using mkdir -p and touch commands:
+
+cyberdefense/
+  agents/
+    __init__.py
+    base_agent.py          ← empty, Person B will fill this
+    network_monitor/
+      __init__.py
+      agent.py
+      requirements.txt
+    log_analyzer/
+      __init__.py
+      agent.py
+      requirements.txt
+    behavior_detector/
+      __init__.py
+      agent.py
+      requirements.txt
+    vuln_scanner/
+      __init__.py
+      agent.py
+      requirements.txt
+  orchestrator/
+    __init__.py
+    orchestrator.py
+    kill_chain.py
+    response_dispatcher.py
+    status_api.py
+    requirements.txt
+  ml_models/
+    __init__.py
+    train.py
+    serve.py
+    feature_engineering.py
+    download_data.py
+    test_api.py
+    data/               ← empty dir
+    models/             ← empty dir
+    requirements.txt
+  response/
+    __init__.py
+    firewall_agent.py
+    isolation_agent.py
+    alert_agent.py
+    forensics_agent.py
+  dashboard/
+    __init__.py
+  proto/
+    threat_report.proto  ← empty, Person B will fill this
+  config/
+    __init__.py
+    config.py            ← YOU fill this (Task 2)
+    mitre_mapping.py     ← empty, Person B will fill this
+    .env                 ← YOU fill this (Task 2)
+  demo/
+    trigger_attacks.sh   ← empty, Person B will fill this
+  verify_infra.py        ← YOU fill this (Task 4)
+  docker-compose.yml     ← YOU fill this (Task 3)
+  README.md
+  .gitignore
+
+Also generate the .gitignore with entries for:
+__pycache__, *.pyc, *.pkl, .env, data/, models/,
+*.egg-info, .DS_Store, venv/, *.log
+
+After generating setup_project.sh, give me the command to run it
+and verify the structure with: find cyberdefense -type f | sort
+
+════════════════════════════════════════
+TASK 2 — CONFIG FILES (do immediately after Task 1, takes 10 min)
+════════════════════════════════════════
+
+Generate config/config.py with ONLY infrastructure and connection
+settings. No agent logic, no ML code, no base classes.
+
+The file must define exactly these things and nothing else:
+
+1. KAFKA settings:
+   KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
+
+   KAFKA_TOPICS = {
+       "network_monitor": "network-monitor-alerts",
+       "log_analyzer":    "log-analyzer-alerts",
+       "behavior":        "behavior-alerts",
+       "vuln_scanner":    "vuln-scanner-alerts",
+       "orchestrator":    "orchestrator-incidents"
+   }
+   ALL_AGENT_TOPICS = list(KAFKA_TOPICS.values())[:4]
+
+2. ELASTICSEARCH settings:
+   ES_HOST = "localhost"
+   ES_PORT = 9200
+   ES_INDICES = {
+       "events":    "sec-events",
+       "incidents": "sec-incidents",
+       "blocked":   "sec-blocked-ips"
+   }
+
+3. REDIS settings:
+   REDIS_HOST = "localhost"
+   REDIS_PORT = 6379
+   REDIS_BLOCK_PREFIX = "blocked:"
+   REDIS_BLOCK_DEFAULT_TTL = 3600
+
+4. ML SERVICE settings:
+   ML_SERVICE_URL = "http://localhost:8001"
+   ML_PREDICT_ENDPOINT = "http://localhost:8001/predict"
+
+5. ORCHESTRATOR API settings:
+   ORCHESTRATOR_API_URL = "http://localhost:8002"
+
+6. SEVERITY as a Python Enum:
+   from enum import Enum
+   class Severity(str, Enum):
+       LOW      = "LOW"
+       MEDIUM   = "MEDIUM"
+       HIGH     = "HIGH"
+       CRITICAL = "CRITICAL"
+
+7. SCORING weights used by the orchestrator:
+   SEVERITY_SCORES = {
+       "LOW": 1, "MEDIUM": 3, "HIGH": 7, "CRITICAL": 10
+   }
+
+8. DETECTION thresholds:
+   THRESHOLDS = {
+       "port_scan_unique_ports":    15,
+       "port_scan_window_seconds":  30,
+       "syn_flood_per_second":      200,
+       "brute_force_attempts":      5,
+       "brute_force_window_seconds":60,
+       "dns_payload_bytes":         100,
+       "dns_label_length":          40,
+       "large_transfer_mb":         50,
+       "anomaly_score_cutoff":      -0.1,
+       "compound_score_critical":   25,
+       "compound_score_high":       15,
+       "compound_score_medium":     8,
+       "correlation_window_seconds":300
+   }
+
+9. WHITELIST of IPs never to block:
+   WHITELIST_IPS = ["127.0.0.1", "localhost", "0.0.0.0"]
+
+10. NETWORK_INTERFACE = "eth0"
+
+Also generate config/.env with these values filled in:
+KAFKA_BOOTSTRAP_SERVERS=localhost:9092
+ES_HOST=localhost
+ES_PORT=9200
+REDIS_HOST=localhost
+REDIS_PORT=6379
+ML_SERVICE_PORT=8001
+ORCHESTRATOR_API_PORT=8002
+NETWORK_INTERFACE=eth0
+SLACK_WEBHOOK_URL=
+LOG_LEVEL=INFO
+
+After generating, give me a one-liner to verify config.py imports
+without errors: python -c "from config.config import *; print('config OK')"
+
+════════════════════════════════════════
+TASK 3 — DOCKER COMPOSE (takes 20 min)
+════════════════════════════════════════
+
+Generate a complete docker-compose.yml for the cyberdefense/ root
+that starts the entire infrastructure with: docker compose up -d
+
+Services to include:
+
+1. kafka:
+   - Image: bitnami/kafka:3.6
+   - KRaft mode (NO Zookeeper) — set all required KRaft env vars
+   - Port: 9092 (host) → 9092 (container)
+   - Environment:
+       KAFKA_CFG_NODE_ID=1
+       KAFKA_CFG_PROCESS_ROLES=broker,controller
+       KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+       KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092
+       KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+       KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+       ALLOW_PLAINTEXT_LISTENER=yes
+   - Volume: kafka_data:/bitnami/kafka
+   - Healthcheck: kafka-topics.sh --list --bootstrap-server localhost:9092
+     interval: 10s, timeout: 10s, retries: 10
+
+2. elasticsearch:
+   - Image: elasticsearch:8.11.0
+   - Port: 9200 → 9200
+   - Environment:
+       discovery.type=single-node
+       xpack.security.enabled=false
+       ES_JAVA_OPTS=-Xms512m -Xmx512m
+   - Volume: es_data:/usr/share/elasticsearch/data
+   - Healthcheck: curl -f http://localhost:9200/_cluster/health
+     interval: 10s, timeout: 10s, retries: 15
+
+3. kibana:
+   - Image: kibana:8.11.0
+   - Port: 5601 → 5601
+   - Environment: ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+   - Depends on elasticsearch (condition: service_healthy)
+   - Healthcheck: curl -f http://localhost:5601/api/status
+     interval: 15s, timeout: 10s, retries: 10
+
+4. redis:
+   - Image: redis:7-alpine
+   - Port: 6379 → 6379
+   - Volume: redis_data:/data
+   - Command: redis-server --appendonly yes
+   - Healthcheck: redis-cli ping
+     interval: 5s, timeout: 5s, retries: 10
+
+All services:
+- Network: cyberdefense-net (bridge driver)
+- Restart policy: unless-stopped
+- Volumes declared at bottom: kafka_data, es_data, redis_data
+
+After docker-compose.yml, give me the exact commands to:
+1. Start everything:       docker compose up -d
+2. Watch logs:             docker compose logs -f
+3. Check health:           docker compose ps
+4. Stop everything:        docker compose down
+
+════════════════════════════════════════
+TASK 4 — VERIFY INFRA SCRIPT (takes 20 min, run after docker is up)
+════════════════════════════════════════
+
+Generate verify_infra.py — a standalone script that checks every
+service and sets up all required Kafka topics and Elasticsearch
+indices so the team can start immediately without manual setup.
+
+Import all settings from config.config — never hardcode anything.
+
+It must do ALL of these in order:
+
+SECTION 1 — KAFKA:
+- Connect using confluent-kafka AdminClient
+- Create all 5 topics from KAFKA_TOPICS if they don't exist:
+    NewTopic(name, num_partitions=4, replication_factor=1)
+- Verify all 5 topics exist after creation
+- Print: [KAFKA] topic "network-monitor-alerts" ... OK / FAILED
+
+SECTION 2 — ELASTICSEARCH:
+- Connect using elasticsearch-py Elasticsearch client
+- Create index "sec-events" with this mapping if not exists:
+  {
+    "mappings": {
+      "properties": {
+        "agent_id":           {"type": "keyword"},
+        "timestamp":          {"type": "date", "format": "epoch_second"},
+        "severity":           {"type": "keyword"},
+        "threat_type":        {"type": "keyword"},
+        "source_ip":          {"type": "ip"},
+        "destination_ip":     {"type": "ip"},
+        "mitre_technique_id": {"type": "keyword"},
+        "mitre_technique_name":{"type":"keyword"},
+        "description":        {"type": "text"},
+        "raw_evidence":       {"type": "text"},
+        "recommended_action": {"type": "text"},
+        "anomaly_score":      {"type": "float"},
+        "compound_score":     {"type": "float"}
+      }
+    }
+  }
+- Create index "sec-incidents" with fields:
+  incident_id (keyword), source_ip (ip), timestamp (date epoch_second),
+  action_taken (keyword), compound_score (float),
+  agents_involved (keyword), kill_chain_stage (keyword),
+  recommended_severity (keyword), alert_count (integer)
+- Create index "sec-blocked-ips" with fields:
+  ip (ip), blocked_at (date epoch_second),
+  duration_minutes (integer), reason (text)
+- Print: [ELASTICSEARCH] index "sec-events" ... OK / FAILED
+
+SECTION 3 — REDIS:
+- Connect using redis-py
+- Run PING, verify response is True
+- Set a test key: SET infra:test "ok" EX 60
+- Get it back and verify value == "ok"
+- Print: [REDIS] connection ... OK / FAILED
+
+SECTION 4 — KIBANA:
+- Use requests to GET http://localhost:5601/api/status
+- Check response status == 200
+- Print: [KIBANA] dashboard ... OK / FAILED
+
+SECTION 5 — FINAL REPORT:
+Print a summary table like:
+══════════════════════════════════
+  CYBERDEFENSE INFRA STATUS
+══════════════════════════════════
+  [✓] Kafka        5/5 topics ready
+  [✓] Elasticsearch 3/3 indices ready
+  [✓] Redis         connected
+  [✓] Kibana        reachable
+══════════════════════════════════
+  STATUS: READY — team can start
+══════════════════════════════════
+
+Use colorama: green ✓ for pass, red ✗ for fail.
+If ANY check fails, print the exact fix command needed.
+For example if Kafka fails: "Run: docker compose up -d kafka"
+
+Requirements: pip install confluent-kafka elasticsearch redis
+              requests colorama
+
+Give me the complete script and the command to run it:
+cd cyberdefense && python verify_infra.py
+```
+
+---
+
+## Person B — Agent Backend
+
+```
+I am building a Multi-Agent Cybersecurity Defense System for a hackathon.
+I am Person B — I build the shared agent foundation and all sensor agents.
+
+CRITICAL RULES:
+- Person A has already created the folder structure and config/config.py
+- I must import ALL connection settings from config.config — never hardcode
+  hosts, ports, topic names, or thresholds anywhere
+- Person A's config.py exports: KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPICS,
+  THRESHOLDS, SEVERITY_SCORES, WHITELIST_IPS, NETWORK_INTERFACE,
+  ML_PREDICT_ENDPOINT, Severity enum
+- I own: agents/base_agent.py, proto/threat_report.proto,
+  config/mitre_mapping.py, all 4 agent files, demo/trigger_attacks.sh
+- I do NOT touch: docker-compose.yml, config/config.py, config/.env,
+  orchestrator/, ml_models/
+
+TEAM CONTEXT:
+- Person A: owns infra, docker, config.py — already done
+- Person C: building ML models, will serve them on http://localhost:8001/predict
+- Person D: building orchestrator that reads from my Kafka topics
+- I must publish valid ThreatReport JSON to Kafka so D's orchestrator works
+
+THE THREATEPORT STRUCTURE (this is the contract with Person D):
+Every message I publish to Kafka must be a JSON object with EXACTLY
+these fields — no more, no less:
+{
+  "agent_id":             string,   // e.g. "network_monitor"
+  "timestamp":            int,      // unix epoch seconds
+  "severity":             string,   // "LOW"|"MEDIUM"|"HIGH"|"CRITICAL"
+  "threat_type":          string,   // e.g. "port_scan"
+  "source_ip":            string,
+  "destination_ip":       string,   // use "" if not applicable
+  "mitre_technique_id":   string,   // e.g. "T1046"
+  "mitre_technique_name": string,   // e.g. "Network Service Discovery"
+  "description":          string,   // human readable summary
+  "raw_evidence":         string,   // what exactly was detected
+  "recommended_action":   string,   // what to do about it
+  "anomaly_score":        float,    // 0.0 if ML not yet called, else ML score
+  "compound_score":       float     // 0.0 always from agents, set by orchestrator
+}
+
+════════════════════════════════════════
+TASK 1 — PROTO SCHEMA (5 min, do first)
+════════════════════════════════════════
+
+Write proto/threat_report.proto matching the ThreatReport structure above.
+Include:
+- syntax = "proto3"
+- A comment at the top with the Python compile command:
+  # protoc --python_out=. proto/threat_report.proto
+- Severity enum: UNKNOWN=0, LOW=1, MEDIUM=2, HIGH=3, CRITICAL=4
+- ThreatReport message with all fields above
+- ThreatReportBatch message with repeated ThreatReport reports and
+  a string batch_id field
+
+════════════════════════════════════════
+TASK 2 — MITRE ATT&CK MAPPING (10 min)
+════════════════════════════════════════
+
+Write config/mitre_mapping.py.
+
+Define a dict MITRE_MAP with these exact keys and values:
+
+"port_scan" → {
+    "technique_id": "T1046",
+    "technique_name": "Network Service Discovery",
+    "tactic": "Discovery",
+    "url": "https://attack.mitre.org/techniques/T1046/"
+}
+"syn_flood" → {
+    "technique_id": "T1498",
+    "technique_name": "Network Denial of Service",
+    "tactic": "Impact",
+    "url": "https://attack.mitre.org/techniques/T1498/"
+}
+"brute_force_ssh" → {
+    "technique_id": "T1110.001",
+    "technique_name": "Password Guessing",
+    "tactic": "Credential Access",
+    "url": "https://attack.mitre.org/techniques/T1110/001/"
+}
+"brute_force_http" → {
+    "technique_id": "T1110.001",
+    "technique_name": "Password Guessing",
+    "tactic": "Credential Access",
+    "url": "https://attack.mitre.org/techniques/T1110/001/"
+}
+"sql_injection" → {
+    "technique_id": "T1190",
+    "technique_name": "Exploit Public-Facing Application",
+    "tactic": "Initial Access",
+    "url": "https://attack.mitre.org/techniques/T1190/"
+}
+"path_traversal" → {
+    "technique_id": "T1083",
+    "technique_name": "File and Directory Discovery",
+    "tactic": "Discovery",
+    "url": "https://attack.mitre.org/techniques/T1083/"
+}
+"dns_tunneling" → {
+    "technique_id": "T1071.004",
+    "technique_name": "DNS Application Layer Protocol",
+    "tactic": "Command and Control",
+    "url": "https://attack.mitre.org/techniques/T1071/004/"
+}
+"data_exfiltration" → {
+    "technique_id": "T1041",
+    "technique_name": "Exfiltration Over C2 Channel",
+    "tactic": "Exfiltration",
+    "url": "https://attack.mitre.org/techniques/T1041/"
+}
+"lateral_movement" → {
+    "technique_id": "T1021",
+    "technique_name": "Remote Services",
+    "tactic": "Lateral Movement",
+    "url": "https://attack.mitre.org/techniques/T1021/"
+}
+"privilege_escalation" → {
+    "technique_id": "T1068",
+    "technique_name": "Exploitation for Privilege Escalation",
+    "tactic": "Privilege Escalation",
+    "url": "https://attack.mitre.org/techniques/T1068/"
+}
+"anomalous_behavior" → {
+    "technique_id": "T1078",
+    "technique_name": "Valid Accounts",
+    "tactic": "Defense Evasion",
+    "url": "https://attack.mitre.org/techniques/T1078/"
+}
+"vulnerability_found" → {
+    "technique_id": "T1190",
+    "technique_name": "Exploit Public-Facing Application",
+    "tactic": "Initial Access",
+    "url": "https://attack.mitre.org/techniques/T1190/"
+}
+
+Also write:
+def get_mitre_info(threat_type: str) -> dict:
+    Returns MITRE_MAP.get(threat_type) or a default dict:
+    {
+        "technique_id": "T0000",
+        "technique_name": "Unknown",
+        "tactic": "Unknown",
+        "url": "https://attack.mitre.org/"
+    }
+
+════════════════════════════════════════
+TASK 3 — BASE AGENT CLASS (15 min)
+════════════════════════════════════════
+
+Write agents/base_agent.py — the parent class ALL agents inherit from.
+
+Imports must include:
+  from config.config import (KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPICS,
+                              THRESHOLDS, ML_PREDICT_ENDPOINT, Severity)
+  from config.mitre_mapping import get_mitre_info
+
+Class BaseAgent:
+
+__init__(self, agent_id: str, kafka_topic: str):
+  - Store agent_id and kafka_topic
+  - Set up a confluent-kafka Producer:
+      conf = {"bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+              "client.id": agent_id}
+  - Set up Python logger with format:
+      "[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s"
+  - Set self.running = True
+
+build_threat_report(self, severity, threat_type, source_ip,
+                    destination_ip, description, raw_evidence,
+                    recommended_action, anomaly_score=0.0) -> dict:
+  - Looks up mitre info using get_mitre_info(threat_type)
+  - Returns a complete ThreatReport dict with all required fields
+  - timestamp = int(time.time())
+  - compound_score always = 0.0 (orchestrator sets this)
+  - anomaly_score = passed in value or 0.0
+
+publish(self, threat_report: dict):
+  - Serialize threat_report to JSON bytes
+  - Call self.producer.produce(self.kafka_topic, value=json_bytes)
+  - Call self.producer.poll(0)
+  - Log: "Published {threat_type} alert for {source_ip}"
+  - On error: log the error, do not crash
+
+enrich_with_ml(self, features: dict) -> float:
+  - POST to ML_PREDICT_ENDPOINT with {"features": features}
+  - Timeout: 2 seconds
+  - On success: return response["anomaly_score"] as float
+  - On ANY error (connection refused, timeout, bad response):
+      log a warning "ML service unavailable, using score 0.0"
+      return 0.0
+  - This means agents work fine even before Person C's ML service is up
+
+print_alert(self, threat_report: dict):
+  - Print a colored one-line summary to stdout using colorama:
+    CRITICAL → red background
+    HIGH     → red text
+    MEDIUM   → yellow text
+    LOW      → cyan text
+  - Format: [SEVERITY] [AGENT_ID] threat_type | source_ip | description
+
+Abstract methods (raise NotImplementedError):
+  observe(self) → raw data from the environment
+  analyze(self, raw_data) → list of ThreatReport dicts
+
+run(self):
+  - Loop while self.running:
+      try:
+          raw = self.observe()
+          reports = self.analyze(raw)
+          for r in reports:
+              self.publish(r)
+              self.print_alert(r)
+      except Exception as e:
+          self.logger.error(f"Agent loop error: {e}")
+      time.sleep(5)
+
+Handle SIGINT and SIGTERM gracefully:
+  set self.running = False, call self.producer.flush(), log "Agent stopped"
+
+════════════════════════════════════════
+TASK 4 — NETWORK MONITOR AGENT (30 min)
+════════════════════════════════════════
+
+Write agents/network_monitor/agent.py
+
+Class NetworkMonitorAgent(BaseAgent):
+
+__init__:
+  - Call super().__init__("network_monitor", KAFKA_TOPICS["network_monitor"])
+  - Import NETWORK_INTERFACE from config.config
+  - self.port_scan_tracker  = defaultdict(list)
+    # {source_ip: [timestamps of each unique port contact]}
+  - self.port_targets       = defaultdict(set)
+    # {source_ip: set of unique destination ports seen}
+  - self.syn_counter        = defaultdict(int)
+    # {source_ip: SYN count in current second}
+  - self.transfer_tracker   = defaultdict(int)
+    # {(src_ip, dst_ip): bytes transferred}
+  - self.lock               = threading.Lock()
+  - self.reports_queue      = queue.Queue()
+
+observe(self):
+  - Use scapy AsyncSniffer on NETWORK_INTERFACE
+  - Callback: self._packet_callback(pkt)
+  - Run sniffer for 10 seconds
+  - Return all queued reports: drain self.reports_queue into a list
+
+analyze(self, raw_data):
+  - raw_data is already a list of ThreatReport dicts from the queue
+  - Return raw_data unchanged (detection happens in _packet_callback)
+
+_packet_callback(self, pkt):
+  Implements all 4 detections. For each detection that triggers,
+  call self._emit(threat_report_dict) which puts it in reports_queue.
+
+  DETECTION 1 — PORT SCAN:
+    If pkt has IP and TCP layers:
+      src = pkt[IP].src
+      dst_port = pkt[TCP].dport
+      with self.lock:
+        self.port_targets[src].add(dst_port)
+        self.port_scan_tracker[src].append(time.time())
+        cutoff = time.time() - THRESHOLDS["port_scan_window_seconds"]
+        self.port_scan_tracker[src] = [
+            t for t in self.port_scan_tracker[src] if t > cutoff
+        ]
+        if len(self.port_targets[src]) > THRESHOLDS["port_scan_unique_ports"]:
+          emit HIGH ThreatReport:
+            threat_type = "port_scan"
+            source_ip = src
+            raw_evidence = f"Contacted {len(self.port_targets[src])} unique
+                            ports in {THRESHOLDS['port_scan_window_seconds']}s"
+            recommended_action = "Block source IP immediately, run
+                                  nmap -sV {src} to fingerprint attacker"
+          self.port_targets[src].clear()
+
+  DETECTION 2 — SYN FLOOD:
+    If pkt has TCP layer and pkt[TCP].flags == 0x02:
+      with self.lock:
+        self.syn_counter[pkt[IP].src] += 1
+        if self.syn_counter[pkt[IP].src] > THRESHOLDS["syn_flood_per_second"]:
+          emit HIGH ThreatReport:
+            threat_type = "syn_flood"
+            raw_evidence = f"SYN flood: {self.syn_counter[src]} SYN/s from {src}"
+            recommended_action = "Rate-limit or null-route source IP"
+          self.syn_counter[pkt[IP].src] = 0
+
+  DETECTION 3 — DNS TUNNELING:
+    If pkt has DNS layer and pkt.haslayer(DNSQR):
+      qname = pkt[DNSQR].qname.decode(errors="ignore")
+      payload_len = len(bytes(pkt[DNS]))
+      labels = qname.split(".")
+      long_label = any(len(l) > THRESHOLDS["dns_label_length"] for l in labels)
+      if payload_len > THRESHOLDS["dns_payload_bytes"] or long_label:
+        emit MEDIUM ThreatReport:
+          threat_type = "dns_tunneling"
+          source_ip = pkt[IP].src
+          raw_evidence = f"DNS query: {qname[:80]} | payload={payload_len}b"
+          recommended_action = "Inspect DNS traffic, block if confirmed C2"
+
+  DETECTION 4 — LARGE OUTBOUND TRANSFER:
+    If pkt has IP and TCP and Raw layers:
+      key = (pkt[IP].src, pkt[IP].dst)
+      with self.lock:
+        self.transfer_tracker[key] += len(pkt[Raw].load)
+        threshold_bytes = THRESHOLDS["large_transfer_mb"] * 1024 * 1024
+        if self.transfer_tracker[key] > threshold_bytes:
+          emit HIGH ThreatReport:
+            threat_type = "data_exfiltration"
+            source_ip = pkt[IP].src, destination_ip = pkt[IP].dst
+            raw_evidence = f"Transfer of
+              {self.transfer_tracker[key]//1024//1024}MB to {pkt[IP].dst}"
+            recommended_action = "Isolate host, capture traffic with tcpdump"
+          self.transfer_tracker[key] = 0
+
+_emit(self, report: dict):
+  self.reports_queue.put(report)
+
+Add __main__ block:
+  if __name__ == "__main__":
+      agent = NetworkMonitorAgent()
+      print("Network Monitor Agent starting...")
+      agent.run()
+
+════════════════════════════════════════
+TASK 5 — LOG ANALYZER AGENT (25 min)
+════════════════════════════════════════
+
+Write agents/log_analyzer/agent.py
+
+Class LogAnalyzerAgent(BaseAgent):
+
+__init__:
+  - super().__init__("log_analyzer", KAFKA_TOPICS["log_analyzer"])
+  - self.failed_attempts = defaultdict(list)
+    # {source_ip: [timestamps of failed logins]}
+  - self.lock = threading.Lock()
+  - self.log_queue = queue.Queue()
+  - Watch these files in separate threads using watchdog or
+    simple tail-F polling with open(file).seek(0,2):
+      /var/log/auth.log
+      /var/log/apache2/access.log (create empty if missing)
+  - Each file-watcher thread pushes new lines into self.log_queue
+
+observe(self):
+  - Collect all lines from self.log_queue for up to 5 seconds
+  - Return list of {"source": filename, "line": text} dicts
+
+analyze(self, raw_data):
+  reports = []
+  for item in raw_data:
+    line = item["line"]
+
+    DETECTION 1 — FAILED SSH LOGIN:
+      pattern: r"Failed password for .+ from (\S+)"
+      on match:
+        ip = match.group(1)
+        with self.lock:
+          cutoff = time.time() - THRESHOLDS["brute_force_window_seconds"]
+          self.failed_attempts[ip] = [
+              t for t in self.failed_attempts[ip] if t > cutoff
+          ]
+          self.failed_attempts[ip].append(time.time())
+          if len(self.failed_attempts[ip]) >= THRESHOLDS["brute_force_attempts"]:
+            reports.append(build_threat_report(
+              severity="HIGH", threat_type="brute_force_ssh",
+              source_ip=ip,
+              raw_evidence=f"{len(self.failed_attempts[ip])} failed SSH
+                            logins from {ip} in
+                            {THRESHOLDS['brute_force_window_seconds']}s",
+              recommended_action="Block IP, check /var/log/auth.log"
+            ))
+            self.failed_attempts[ip] = []
+
+    DETECTION 2 — SUCCESSFUL LOGIN AFTER FAILURES:
+      pattern: r"Accepted password for .+ from (\S+)"
+      on match:
+        ip = match.group(1)
+        if len(self.failed_attempts.get(ip, [])) >= 3:
+          reports.append(build_threat_report(
+            severity="CRITICAL", threat_type="brute_force_ssh",
+            source_ip=ip,
+            raw_evidence=f"Successful SSH login from {ip} after
+                          {len(self.failed_attempts[ip])} failures —
+                          possible credential stuffing",
+            recommended_action="Investigate session immediately,
+                                check for lateral movement"
+          ))
+
+    DETECTION 3 — SQL INJECTION:
+      patterns (re.IGNORECASE):
+        r"UNION\s+SELECT", r"0x[0-9a-fA-F]+",
+        r"DROP\s+TABLE", r"--\s*$", r"\bOR\b.+\b1\s*=\s*1\b"
+      on any match:
+        reports.append(build_threat_report(
+          severity="CRITICAL", threat_type="sql_injection",
+          source_ip=extract_ip_from_log_line(line),
+          raw_evidence=f"SQLi pattern in: {line[:200]}",
+          recommended_action="Block IP, review WAF rules,
+                              check DB query logs"
+        ))
+
+    DETECTION 4 — PATH TRAVERSAL:
+      pattern: r"\.\./|\.\.\\|%2e%2e%2f" (re.IGNORECASE)
+      on match:
+        reports.append(build_threat_report(
+          severity="HIGH", threat_type="path_traversal",
+          source_ip=extract_ip_from_log_line(line),
+          raw_evidence=f"Path traversal in: {line[:200]}",
+          recommended_action="Block IP, audit file access logs"
+        ))
+
+  return reports
+
+Helper: extract_ip_from_log_line(line: str) -> str:
+  Try these patterns in order, return first match or "0.0.0.0":
+  1. Apache combined log format: r'^(\S+)'
+  2. IP anywhere: r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b'
+
+Add __main__ block.
+
+════════════════════════════════════════
+TASK 6 — DEMO ATTACK SCRIPT (10 min, do last)
+════════════════════════════════════════
+
+Write demo/trigger_attacks.sh — a bash script that runs 4 attacks
+in sequence with colored output and 3-second pauses between each:
+
+#!/bin/bash
+RED='\033[0;31m'; YELLOW='\033[0;33m'
+CYAN='\033[0;36m'; NC='\033[0m'
+
+echo -e "${RED}[ATTACK 1] Port Scan — MITRE T1046${NC}"
+nmap -sS -p 1-500 localhost
+sleep 3
+
+echo -e "${RED}[ATTACK 2] SSH Brute Force — MITRE T1110.001${NC}"
+for i in {1..8}; do
+  ssh -o ConnectTimeout=2 -o StrictHostKeyChecking=no \
+      wronguser@localhost 2>/dev/null || true
+done
+sleep 3
+
+echo -e "${YELLOW}[ATTACK 3] SQL Injection — MITRE T1190${NC}"
+curl -s "http://localhost/login?user=admin'%20UNION%20SELECT%201,2,3--" \
+     -o /dev/null || true
+sleep 3
+
+echo -e "${YELLOW}[ATTACK 4] Path Traversal — MITRE T1083${NC}"
+curl -s "http://localhost/../../etc/passwd" -o /dev/null || true
+sleep 3
+
+echo -e "${CYAN}[DONE] All attacks executed. Check agent terminals for alerts.${NC}"
+
+chmod +x demo/trigger_attacks.sh automatically at the end.
+
+════════════════════════════════════════
+DEPENDENCY NOTE
+════════════════════════════════════════
+The enrich_with_ml() method in BaseAgent already handles the case where
+Person C's ML service is not yet running — it returns 0.0 silently.
+So my agents will work and publish to Kafka even before C is done.
+Once C's service comes up on port 8001, enrichment starts automatically.
+
+Give me one task at a time. Start with TASK 1.
+Give complete, copy-pasteable code. No placeholders.
+After each task give me the exact pip install command and
+a one-liner to verify it works.
+```
+
+---
+
+## Person C — ML Models
+
+```
+I am building a Multi-Agent Cybersecurity Defense System for a hackathon.
+I am Person C — I build and serve all ML models for threat detection.
+
+CRITICAL RULES:
+- Person A has already created folder structure and config/config.py
+- I must import ML_PREDICT_ENDPOINT, ES_HOST, ES_PORT from config.config
+  for any connections — never hardcode
+- My FastAPI ML service MUST run on port 8001 — Person B's agents
+  call http://localhost:8001/predict to enrich their threat reports
+- I own everything inside ml_models/ only
+- I do NOT touch: agents/, orchestrator/, docker-compose.yml, config/config.py
+
+TEAM CONTEXT:
+- Person A: infra done, ES indices created, Kafka topics ready
+- Person B: agents call my /predict endpoint to get anomaly_score
+  They pass a features dict and expect back at minimum: anomaly_score (float)
+- Person D: orchestrator reads from Kafka, no dependency on me directly
+- My service must be running before B's agents can do ML enrichment,
+  but B's agents will still work without me (they use score 0.0 as fallback)
+
+THE /predict CONTRACT (Person B's agents depend on this exactly):
+POST http://localhost:8001/predict
+Request body:  {"features": {feature_name: value, ...}}
+Response must include AT MINIMUM:
+{
+  "anomaly_score":      float,   // IsolationForest score, negative = more anomalous
+  "is_anomaly":         bool,
+  "threat_class":       string,  // "normal"|"dos"|"probe"|"r2l"|"u2r"
+  "binary_prediction":  string,  // "attack" or "normal"
+  "binary_confidence":  float,
+  "overall_severity":   string,  // "CRITICAL"|"HIGH"|"MEDIUM"|"LOW"|"NONE"
+  "model_agreement":    bool
+}
+
+════════════════════════════════════════
+TASK 1 — DOWNLOAD DATA AND EDA (15 min)
+════════════════════════════════════════
+
+Write ml_models/download_data.py
+
+The NSL-KDD dataset has exactly 42 columns. Here they are in order:
+duration, protocol_type, service, flag, src_bytes, dst_bytes, land,
+wrong_fragment, urgent, hot, num_failed_logins, logged_in,
+num_compromised, root_shell, su_attempted, num_root,
+num_file_creations, num_shells, num_access_files, num_outbound_cmds,
+is_host_login, is_guest_login, count, srv_count, serror_rate,
+srv_serror_rate, rerror_rate, srv_rerror_rate, same_srv_rate,
+diff_srv_rate, srv_diff_host_rate, dst_host_count, dst_host_srv_count,
+dst_host_same_srv_rate, dst_host_diff_srv_rate,
+dst_host_same_src_port_rate, dst_host_srv_diff_host_rate,
+dst_host_serror_rate, dst_host_srv_serror_rate,
+dst_host_rerror_rate, dst_host_srv_rerror_rate,
+label, difficulty_level
+
+Download URLs:
+  Train: https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTrain+.txt
+  Test:  https://raw.githubusercontent.com/defcom17/NSL_KDD/master/KDDTest+.txt
+
+Save to ml_models/data/KDDTrain+.txt and ml_models/data/KDDTest+.txt
+
+The script must:
+1. Download both files using requests with a progress indicator
+2. Load into pandas with the 42 column names above
+3. Print: shape, null count, dtypes, label value_counts for both sets
+4. Create binary label column "label_binary":
+     "normal" → 0, everything else → 1
+5. Create 5-class label column "label_5class" using this complete mapping:
+     normal → "normal"
+     back, land, neptune, pod, smurf, teardrop,
+     apache2, udpstorm, processtable, worm → "dos"
+     satan, ipsweep, nmap, portsweep,
+     mscan, saint → "probe"
+     guess_passwd, ftp_write, imap, phf, multihop,
+     warezmaster, warezclient, spy, xlock, xsnoop,
+     snmpguess, snmpgetattack, httptunnel,
+     sendmail, named → "r2l"
+     buffer_overflow, loadmodule, perl, rootkit,
+     sqlattack, xterm, ps → "u2r"
+     anything else → "dos"
+6. Save cleaned DataFrames:
+     ml_models/data/train_clean.csv
+     ml_models/data/test_clean.csv
+7. Save a bar chart of 5-class label distribution:
+     ml_models/data/attack_distribution.png
+
+════════════════════════════════════════
+TASK 2 — FEATURE ENGINEERING (15 min)
+════════════════════════════════════════
+
+Write ml_models/feature_engineering.py
+
+Categorical columns in NSL-KDD: protocol_type, service, flag
+
+Function prepare_features(train_df, test_df) -> tuple:
+  1. One-hot encode the 3 categorical columns using pd.get_dummies
+  2. Align train and test columns so they have identical features:
+       train_enc, test_enc = train_enc.align(test_enc,
+                                              join="left",
+                                              axis=1,
+                                              fill_value=0)
+  3. Define feature columns = all columns except label, label_binary,
+     label_5class, difficulty_level
+  4. Extract:
+       X_train = train_enc[feature_columns]
+       X_test  = test_enc[feature_columns]
+       y_bin_train = train_df["label_binary"]
+       y_bin_test  = test_df["label_binary"]
+       y_5_train   = train_df["label_5class"]
+       y_5_test    = test_df["label_5class"]
+  5. Fit StandardScaler on X_train only, transform both:
+       scaler = StandardScaler()
+       X_train_scaled = scaler.fit_transform(X_train)
+       X_test_scaled  = scaler.transform(X_test)
+  6. Save:
+       joblib.dump(scaler, "ml_models/models/scaler.pkl")
+       json.dump(feature_columns.tolist(),
+                 open("ml_models/models/feature_columns.json","w"))
+  7. Return: (X_train_scaled, X_test_scaled,
+              y_bin_train, y_bin_test,
+              y_5_train, y_5_test,
+              feature_columns, scaler)
+
+════════════════════════════════════════
+TASK 3 — MODEL TRAINING (20 min)
+════════════════════════════════════════
+
+Write ml_models/train.py
+
+Import prepare_features from ml_models.feature_engineering
+Load train_clean.csv and test_clean.csv from ml_models/data/
+Call prepare_features(train_df, test_df)
+
+Train 3 models:
+
+MODEL 1 — IsolationForest:
+  - Train ONLY on X_train rows where y_bin_train == 0 (normal traffic)
+  - IsolationForest(n_estimators=200, contamination=0.05, random_state=42)
+  - Predict on full X_test: scores = model.decision_function(X_test)
+  - Classify: predicted = (scores < THRESHOLDS["anomaly_score_cutoff"]).astype(int)
+    (import THRESHOLDS from config.config)
+  - Print precision, recall, f1 vs y_bin_test
+  - Save: joblib.dump(model, "ml_models/models/isolation_forest.pkl")
+
+MODEL 2 — RandomForestClassifier:
+  - Train on full X_train with y_5_train (5-class labels)
+  - RandomForestClassifier(n_estimators=150, max_depth=20,
+                            random_state=42, n_jobs=-1)
+  - Evaluate on X_test vs y_5_test
+  - Print: classification_report, confusion matrix
+  - Print top 15 feature importances with feature names
+  - Save: joblib.dump(model, "ml_models/models/random_forest.pkl")
+
+MODEL 3 — GradientBoostingClassifier:
+  - Train on X_train with y_bin_train (binary)
+  - GradientBoostingClassifier(n_estimators=100, max_depth=5,
+                                learning_rate=0.1, random_state=42)
+  - Evaluate: accuracy, precision, recall, f1, roc_auc_score
+  - Save: joblib.dump(model, "ml_models/models/gradient_boost.pkl")
+
+After all 3 models, save ml_models/models/stats.json:
+{
+  "isolation_forest": {"precision": x, "recall": x, "f1": x},
+  "random_forest":    {"accuracy": x, "macro_f1": x,
+                       "feature_importances": {name: score, ...} top 10},
+  "gradient_boost":   {"accuracy": x, "roc_auc": x},
+  "feature_columns":  [...],
+  "trained_at":       epoch_timestamp
+}
+
+Print final summary:
+════════════════════════════════════
+  MODEL PERFORMANCE SUMMARY
+════════════════════════════════════
+  IsolationForest  | P: 0.XX R: 0.XX F1: 0.XX
+  RandomForest     | Acc: 0.XX MacroF1: 0.XX
+  GradientBoost    | Acc: 0.XX ROC-AUC: 0.XX
+════════════════════════════════════
+
+════════════════════════════════════════
+TASK 4 — FASTAPI SERVING (25 min)
+════════════════════════════════════════
+
+Write ml_models/serve.py — complete FastAPI app, port 8001.
+
+On startup (lifespan event):
+  Load all 3 .pkl model files using joblib
+  Load scaler.pkl and feature_columns.json
+  Log "All models loaded" with file sizes
+  If any model file missing: raise RuntimeError with instructions
+
+Pydantic models:
+  class PredictRequest(BaseModel):
+      features: Dict[str, float]
+
+  class PredictResponse(BaseModel):
+      anomaly_score:              float
+      is_anomaly:                 bool
+      threat_class:               str
+      threat_class_probabilities: Dict[str, float]
+      binary_prediction:          str
+      binary_confidence:          float
+      overall_severity:           str
+      model_agreement:            bool
+
+Preprocessing function preprocess(features: dict) -> np.ndarray:
+  - Create a zero-filled array of length len(feature_columns)
+  - Fill in values from features dict where column names match
+  - Apply scaler.transform
+  - Return shaped array ready for model.predict
+
+POST /predict (this is the endpoint Person B's agents call):
+  - Call preprocess(request.features)
+  - Run IsolationForest: score = float(iso.decision_function(X)[0])
+  - Run RandomForest:    proba = rf.predict_proba(X)[0]
+                         threat_class = rf.classes_[np.argmax(proba)]
+                         proba_dict = dict(zip(rf.classes_, proba.tolist()))
+  - Run GradientBoost:  bin_proba = gb.predict_proba(X)[0]
+                         binary_pred = "attack" if bin_proba[1]>0.5 else "normal"
+                         binary_conf = float(max(bin_proba))
+  - Call derive_severity(score, threat_class, binary_pred, binary_conf)
+  - model_agreement: all 3 agree (iso anomaly == binary attack == threat!=normal)
+  - Return full PredictResponse
+  - On error: HTTPException(422, detail=str(e))
+
+POST /predict_batch:
+  - Accepts List[PredictRequest], max 100 items
+  - Returns List[PredictResponse]
+
+GET /model_stats:
+  - Load and return stats.json content
+
+GET /health:
+  - Returns {"status":"ok","models_loaded":true,"timestamp":int(time.time())}
+
+CORS: allow all origins
+
+Function derive_severity(score, threat_class, binary_pred, binary_conf) -> str:
+  if threat_class in ("dos", "u2r"):         return "CRITICAL"
+  if threat_class == "r2l" and binary_conf > 0.8: return "HIGH"
+  if threat_class == "probe":                return "MEDIUM"
+  if score < THRESHOLDS["anomaly_score_cutoff"] and binary_pred=="attack":
+                                             return "HIGH"
+  if score < THRESHOLDS["anomaly_score_cutoff"] and binary_pred=="normal":
+                                             return "LOW"
+  return "NONE"
+
+  (import THRESHOLDS from config.config)
+
+Run with:
+  if __name__ == "__main__":
+      uvicorn.run("ml_models.serve:app", host="0.0.0.0", port=8001, reload=False)
+
+════════════════════════════════════════
+TASK 5 — API TEST SCRIPT (10 min)
+════════════════════════════════════════
+
+Write ml_models/test_api.py using requests library:
+
+1. GET /health → print response
+2. POST /predict with a DoS-like feature vector
+   (use realistic NSL-KDD feature names: duration=0, protocol_type=0,
+    src_bytes=1032, dst_bytes=0, count=511, serror_rate=1.0, etc.)
+3. POST /predict with a normal traffic feature vector
+   (duration=2, src_bytes=215, dst_bytes=45053, count=1, serror_rate=0)
+4. GET /model_stats → print top 10 features
+Print all responses formatted with json.dumps(indent=2)
+
+════════════════════════════════════════
+SEQUENCE FOR THIS SESSION:
+════════════════════════════════════════
+Run tasks in this order:
+1. download_data.py  (get the data)
+2. feature_engineering.py  (prep features)
+3. train.py  (train models — takes ~5-8 min on laptop)
+4. serve.py  (start the API on port 8001)
+5. test_api.py  (verify everything works)
+
+The team needs /predict live ASAP. If training takes too long,
+run train.py with reduced params:
+  IsolationForest: n_estimators=50
+  RandomForest: n_estimators=50
+  GradientBoost: n_estimators=30
+Fast models are better than no models for the demo.
+
+Give me one task at a time. Start with TASK 1.
+Complete code only — no placeholders.
+After each task give pip install command and verify one-liner.
+```
+
+---
+
+## Person D — Orchestrator + Pitch
+
+```
+I am building a Multi-Agent Cybersecurity Defense System for a hackathon.
+I am Person D — I build the orchestrator agent and own the Review 1 pitch.
+
+CRITICAL RULES:
+- Person A has already created the folder structure and config/config.py
+- I MUST import ALL settings from config.config — never hardcode any
+  topic names, hosts, ports, or thresholds anywhere in my code
+- From config.config I need: KAFKA_TOPICS, ALL_AGENT_TOPICS, ES_INDICES,
+  REDIS_HOST, REDIS_PORT, REDIS_BLOCK_PREFIX, SEVERITY_SCORES,
+  THRESHOLDS, WHITELIST_IPS, Severity
+- Person B publishes ThreatReport JSON dicts to these Kafka topics:
+    network-monitor-alerts, log-analyzer-alerts,
+    behavior-alerts, vuln-scanner-alerts
+- Person C serves ML models on port 8001 (I don't call this directly —
+  only B's agents call it)
+- I own: orchestrator/kill_chain.py, orchestrator/orchestrator.py,
+  orchestrator/response_dispatcher.py, orchestrator/status_api.py
+- I do NOT touch: agents/, ml_models/, config/config.py,
+  docker-compose.yml
+
+THE THREATEPORT I CONSUME (Person B publishes this exact structure):
+{
+  "agent_id":             string,
+  "timestamp":            int,      // unix epoch seconds
+  "severity":             string,   // "LOW"|"MEDIUM"|"HIGH"|"CRITICAL"
+  "threat_type":          string,
+  "source_ip":            string,
+  "destination_ip":       string,
+  "mitre_technique_id":   string,
+  "mitre_technique_name": string,
+  "description":          string,
+  "raw_evidence":         string,
+  "recommended_action":   string,
+  "anomaly_score":        float,
+  "compound_score":       float     // always 0.0 from agents, I set this
+}
+
+════════════════════════════════════════
+TASK 1 — KILL CHAIN MAPPER (15 min)
+════════════════════════════════════════
+
+Write orchestrator/kill_chain.py
+
+Define kill chain stages as a dict:
+KILL_CHAIN_STAGES = {
+    1: "Reconnaissance",
+    2: "Weaponization",
+    3: "Delivery",
+    4: "Exploitation",
+    5: "Installation",
+    6: "Command & Control",
+    7: "Actions on Objectives"
+}
+
+Define KILL_CHAIN_MAP mapping threat_type → stage number:
+  "port_scan"            → 1
+  "vuln_scan"            → 1
+  "vulnerability_found"  → 1
+  "brute_force_ssh"      → 3
+  "brute_force_http"     → 3
+  "sql_injection"        → 4
+  "path_traversal"       → 4
+  "privilege_escalation" → 5
+  "dns_tunneling"        → 6
+  "lateral_movement"     → 6
+  "data_exfiltration"    → 7
+  "anomalous_behavior"   → 7
+  "syn_flood"            → 7
+
+Function analyze_kill_chain_progression(events: list) -> dict:
+  events is a list of ThreatReport dicts from the same source_ip.
+
+  stages_detected = sorted(set of KILL_CHAIN_MAP.get(e["threat_type"], 0)
+                            for e in events if e["threat_type"] in KILL_CHAIN_MAP))
+
+  progression_score = len(stages_detected)  // 0 to 7
+
+  is_apt_pattern = (1 in stages_detected and
+                    3 in stages_detected and
+                    4 in stages_detected)
+  // APT = attacker has done recon + delivery + exploitation
+
+  if len(stages_detected) == 0:
+    narrative = "No kill chain progression detected"
+  else:
+    stage_names = [KILL_CHAIN_STAGES[s] for s in stages_detected]
+    narrative = "Attacker progressed: " + " → ".join(stage_names)
+
+  return {
+      "source_ip":         events[0]["source_ip"] if events else "",
+      "stages_detected":   stages_detected,
+      "progression_score": progression_score,
+      "is_apt_pattern":    is_apt_pattern,
+      "narrative":         narrative
+  }
+
+════════════════════════════════════════
+TASK 2 — RESPONSE DISPATCHER (20 min)
+════════════════════════════════════════
+
+Write orchestrator/response_dispatcher.py
+
+Import from config.config:
+  REDIS_HOST, REDIS_PORT, REDIS_BLOCK_PREFIX,
+  REDIS_BLOCK_DEFAULT_TTL, WHITELIST_IPS
+
+Class ResponseDispatcher:
+
+__init__:
+  - Connect to Redis: redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0)
+  - Set up logger
+  - Try to import docker; set self.docker_available = True/False
+    (graceful if docker SDK not installed)
+
+block_ip(self, ip: str, duration_minutes: int = 60) -> dict:
+  - If ip in WHITELIST_IPS: return {"success":False,"message":"IP is whitelisted"}
+  - Run subprocess commands (use subprocess.run with check=False,
+    capture_output=True — never crash if iptables fails):
+      iptables -A INPUT  -s {ip} -j DROP
+      iptables -A OUTPUT -d {ip} -j DROP
+  - Store in Redis:
+      key = f"{REDIS_BLOCK_PREFIX}{ip}"
+      self.redis.setex(key, duration_minutes * 60, "blocked")
+  - Log: f"[BLOCKED] {ip} for {duration_minutes} minutes"
+  - Return {"success":True,"message":f"Blocked {ip} for {duration_minutes}min",
+            "iptables_applied": (returncode==0)}
+
+unblock_ip(self, ip: str) -> dict:
+  - iptables -D INPUT  -s {ip} -j DROP
+  - iptables -D OUTPUT -d {ip} -j DROP
+  - self.redis.delete(f"{REDIS_BLOCK_PREFIX}{ip}")
+  - Return {"success":True,"message":f"Unblocked {ip}"}
+
+isolate_host(self, ip: str) -> dict:
+  - If not self.docker_available:
+      return {"success":False,"message":"Docker SDK not available"}
+  - client = docker.from_env()
+  - For each container in client.containers.list():
+      nets = container.attrs["NetworkSettings"]["Networks"]
+      for net_name, net_cfg in nets.items():
+          if net_cfg["IPAddress"] == ip:
+              container.pause()
+              return {"success":True,
+                      "message":f"Paused container {container.name}"}
+  - return {"success":False,"message":f"No container found for {ip}"}
+
+send_slack_alert(self, message: str, severity: str):
+  - Read SLACK_WEBHOOK_URL from os.environ — if empty, skip silently
+  - Color map: CRITICAL="#E74C3C", HIGH="#E67E22",
+               MEDIUM="#F1C40F", LOW="#3498DB"
+  - POST to Slack webhook with Block Kit payload:
+      {"attachments":[{"color":color,"text":message,"mrkdwn_in":["text"]}]}
+  - On any error: log warning, do not crash
+
+get_blocked_ips(self) -> list:
+  - Scan Redis for keys matching f"{REDIS_BLOCK_PREFIX}*"
+  - For each key get TTL: self.redis.ttl(key)
+  - Return list of {
+        "ip": key.replace(REDIS_BLOCK_PREFIX,""),
+        "ttl_seconds": ttl
+    }
+
+════════════════════════════════════════
+TASK 3 — ORCHESTRATOR CORE (30 min)
+════════════════════════════════════════
+
+Write orchestrator/orchestrator.py
+
+Import from config.config:
+  ALL_AGENT_TOPICS, KAFKA_BOOTSTRAP_SERVERS,
+  KAFKA_TOPICS, ES_INDICES, SEVERITY_SCORES,
+  THRESHOLDS, Severity
+
+Import from orchestrator.kill_chain: analyze_kill_chain_progression
+Import from orchestrator.response_dispatcher: ResponseDispatcher
+
+Class OrchestratorAgent:
+
+__init__:
+  - self.dispatcher = ResponseDispatcher()
+  - self.correlation_window: Dict[str, deque] = defaultdict(
+        lambda: deque(maxlen=100))
+    // {source_ip: deque of ThreatReport dicts}
+  - self.lock = threading.Lock()
+  - self.running = True
+  - Connect to Elasticsearch:
+      self.es = Elasticsearch(
+          [{"host": ES_HOST, "port": ES_PORT, "scheme": "http"}])
+    (import ES_HOST, ES_PORT from config.config)
+  - Set up consumer in __init__ but start it in run():
+      self.consumer = Consumer({
+          "bootstrap.servers": KAFKA_BOOTSTRAP_SERVERS,
+          "group.id": "orchestrator-main",
+          "auto.offset.reset": "latest"
+      })
+      self.consumer.subscribe(ALL_AGENT_TOPICS)
+  - Set up logger
+
+process_alert(self, threat_report: dict):
+  source_ip = threat_report.get("source_ip", "0.0.0.0")
+  with self.lock:
+    self.correlation_window[source_ip].append(threat_report)
+    // Remove events older than THRESHOLDS["correlation_window_seconds"]
+    cutoff = time.time() - THRESHOLDS["correlation_window_seconds"]
+    self.correlation_window[source_ip] = deque(
+        [e for e in self.correlation_window[source_ip]
+         if e["timestamp"] > cutoff],
+        maxlen=100
+    )
+  result = self.correlate_and_score(source_ip)
+  self.decide_response(result)
+
+correlate_and_score(self, source_ip: str) -> dict:
+  with self.lock:
+    events = list(self.correlation_window[source_ip])
+
+  if not events:
+    return {"source_ip": source_ip, "compound_score": 0.0,
+            "alert_count": 0, "agents_involved": [],
+            "kill_chain": {}, "recommended_severity": "LOW"}
+
+  // Base score
+  base_score = sum(
+      SEVERITY_SCORES.get(e["severity"], 1) for e in events
+  )
+
+  // Cross-agent multiplier
+  agents_involved = list(set(e["agent_id"] for e in events))
+  cross_agent_mult = 1.5 if len(agents_involved) > 1 else 1.0
+
+  // Kill chain multiplier
+  kc = analyze_kill_chain_progression(events)
+  kc_mult = 1 + kc["progression_score"] * 0.2
+
+  compound_score = base_score * cross_agent_mult * kc_mult
+
+  // Derive severity
+  if compound_score >= THRESHOLDS["compound_score_critical"]:
+    recommended_severity = "CRITICAL"
+  elif compound_score >= THRESHOLDS["compound_score_high"]:
+    recommended_severity = "HIGH"
+  elif compound_score >= THRESHOLDS["compound_score_medium"]:
+    recommended_severity = "MEDIUM"
+  else:
+    recommended_severity = "LOW"
+
+  return {
+      "source_ip":            source_ip,
+      "compound_score":       round(compound_score, 2),
+      "alert_count":          len(events),
+      "agents_involved":      agents_involved,
+      "kill_chain":           kc,
+      "recommended_severity": recommended_severity,
+      "mitre_techniques":     list(set(
+          e["mitre_technique_id"] for e in events
+          if e.get("mitre_technique_id")
+      ))
+  }
+
+decide_response(self, result: dict):
+  sev = result["recommended_severity"]
+  score = result["compound_score"]
+  ip = result["source_ip"]
+
+  if sev == "CRITICAL" or score >= THRESHOLDS["compound_score_critical"]:
+    self.dispatcher.block_ip(ip)
+    self.dispatcher.isolate_host(ip)
+    self.dispatcher.send_slack_alert(
+        self._format_alert(result), "CRITICAL")
+    self.log_incident(result, "AUTO_BLOCKED_AND_ISOLATED")
+
+  elif sev == "HIGH" or score >= THRESHOLDS["compound_score_high"]:
+    self.dispatcher.block_ip(ip)
+    self.dispatcher.send_slack_alert(self._format_alert(result), "HIGH")
+    self.log_incident(result, "AUTO_BLOCKED")
+
+  elif sev == "MEDIUM" or score >= THRESHOLDS["compound_score_medium"]:
+    self.dispatcher.send_slack_alert(self._format_alert(result), "MEDIUM")
+    self.log_incident(result, "PENDING_REVIEW")
+
+  else:
+    self.log_incident(result, "LOGGED")
+
+log_incident(self, result: dict, action_taken: str):
+  doc = {
+      **result,
+      "action_taken": action_taken,
+      "incident_id":  str(uuid.uuid4()),
+      "timestamp":    int(time.time())
+  }
+  try:
+    self.es.index(index=ES_INDICES["incidents"], document=doc)
+  except Exception as e:
+    self.logger.error(f"ES write failed: {e}")
+  // Print colored summary to stdout
+  color = {"CRITICAL":"\033[41m","HIGH":"\033[31m",
+           "MEDIUM":"\033[33m","LOW":"\033[36m"}
+  c = color.get(result["recommended_severity"], "")
+  reset = "\033[0m"
+  print(f"{c}[INCIDENT] {result['recommended_severity']} | "
+        f"IP: {result['source_ip']} | Score: {result['compound_score']} | "
+        f"Action: {action_taken} | "
+        f"Kill chain: {result['kill_chain'].get('narrative','')}{reset}")
+
+_format_alert(self, result: dict) -> str:
+  kc = result.get("kill_chain", {})
+  return (
+      f"*{result['recommended_severity']} THREAT DETECTED*\n"
+      f"Source IP: `{result['source_ip']}`\n"
+      f"Compound Score: {result['compound_score']}\n"
+      f"Agents involved: {', '.join(result['agents_involved'])}\n"
+      f"MITRE techniques: {', '.join(result.get('mitre_techniques',[]))}\n"
+      f"Kill chain: {kc.get('narrative','Unknown')}\n"
+      f"APT pattern: {'YES — ESCALATE NOW' if kc.get('is_apt_pattern') else 'No'}"
+  )
+
+run(self):
+  self.logger.info("Orchestrator started, consuming from all agent topics")
+  while self.running:
+    msg = self.consumer.poll(timeout=1.0)
+    if msg is None: continue
+    if msg.error():
+      self.logger.error(f"Kafka error: {msg.error()}")
+      continue
+    try:
+      threat_report = json.loads(msg.value().decode("utf-8"))
+      self.process_alert(threat_report)
+    except json.JSONDecodeError as e:
+      self.logger.error(f"Bad JSON from Kafka: {e}")
+    except Exception as e:
+      self.logger.error(f"Processing error: {e}")
+
+Handle SIGINT/SIGTERM: set self.running=False,
+  self.consumer.close(), log "Orchestrator stopped"
+
+Add __main__ block:
+  if __name__ == "__main__":
+      agent = OrchestratorAgent()
+      agent.run()
+
+════════════════════════════════════════
+TASK 4 — STATUS API (20 min)
+════════════════════════════════════════
+
+Write orchestrator/status_api.py — FastAPI app on port 8002.
+This is what the dashboard reads from.
+
+Import from config.config:
+  ES_INDICES, REDIS_HOST, REDIS_PORT, REDIS_BLOCK_PREFIX,
+  ES_HOST, ES_PORT
+
+On startup: connect to ES and Redis.
+
+GET /status:
+  Query ES for today's incident counts grouped by recommended_severity:
+    use terms aggregation on "action_taken" and "recommended_severity"
+  Query Redis for count of keys matching f"{REDIS_BLOCK_PREFIX}*"
+  Return:
+  {
+    "agents_active": ["network_monitor","log_analyzer",
+                      "behavior_detector","vuln_scanner"],
+    "total_incidents_today": int,
+    "blocked_ips_count": int,
+    "critical_count": int,
+    "high_count": int,
+    "medium_count": int,
+    "low_count": int,
+    "last_updated": int   // epoch
+  }
+
+GET /incidents:
+  Query params: limit: int = 20, severity: str = None
+  Query ES index ES_INDICES["incidents"], sort by timestamp desc
+  Filter by recommended_severity if provided
+  Return list of incident dicts
+
+GET /blocked_ips:
+  Scan Redis for f"{REDIS_BLOCK_PREFIX}*"
+  Return [{"ip": str, "ttl_seconds": int}, ...]
+
+GET /kill_chain_status:
+  // Read from ES — get all incidents in last 10 minutes
+  // Group by source_ip, return kill chain info per IP
+  Return [{"source_ip": str, "progression_score": int,
+           "narrative": str, "is_apt_pattern": bool}, ...]
+
+GET /health:
+  Return {"status":"ok","timestamp":int(time.time())}
+
+CORS: allow all origins.
+Run on port 8002.
+
+════════════════════════════════════════
+TASK 5 — PITCH SCRIPT (write this in parallel, no dependencies)
+════════════════════════════════════════
+
+Write me a complete word-for-word 3-minute spoken pitch script for
+Review 1. Judges score: Problem Definition (10), Originality (15),
+Impact & Scalability (10).
+
+[SLIDE 1 — THE PROBLEM — 30 seconds]
+Write the exact words to say. Must mention:
+- 10,000+ security alerts per day in a typical enterprise SOC
+- 280-day average attacker dwell time before detection (IBM report)
+- Human analysts can process 30-50 alerts per hour maximum
+- Result: 70% of alerts go uninvestigated
+
+[SLIDE 2 — THE GAP — 20 seconds]
+Exact words. Must mention:
+- Existing SIEMs (Splunk, IBM QRadar) are passive — they alert but
+  humans still decide and act
+- Single-model systems miss multi-vector attacks that span different
+  network layers simultaneously
+
+[SLIDE 3 — OUR SOLUTION — 45 seconds]
+Exact words. Must cover:
+- Four specialized AI agents running in parallel, each an expert in
+  its domain
+- A central orchestrator that correlates alerts across agents
+- MITRE ATT&CK kill chain tracking — we know HOW FAR an attacker
+  has progressed
+- Automated response in under 500ms: block, isolate, alert
+- ML models trained on real intrusion data (NSL-KDD dataset) for
+  anomaly detection and threat classification
+
+[SLIDE 4 — ARCHITECTURE — 30 seconds]
+Exact words narrating the architecture diagram:
+Sensor layer → Kafka message bus → Orchestrator with ML engine →
+Response agents
+
+[SLIDE 5 — LIVE DEMO HOOK — 15 seconds]
+One punchy setup line before the demo.
+Something like: "We're now going to port scan our own system and watch
+the agents detect, correlate, and block it — in real time."
+
+[SLIDE 6 — IMPACT — 20 seconds]
+Exact words. Cover:
+- Each component is a Docker container — scale horizontally to any
+  enterprise size
+- Modular: new agent types can be added without changing existing code
+- Future: integrate with AWS Security Hub, Azure Sentinel, GCP SCC
+- Open source friendly — built on industry-standard tools
+
+Also give me word-for-word answers to these 5 judge questions:
+Q1: How is this different from Splunk or IBM QRadar?
+Q2: What is your ML model accuracy?
+Q3: How do you prevent false positives from blocking legitimate traffic?
+Q4: What if the orchestrator itself gets attacked or goes down?
+Q5: Can this work at enterprise scale — 50,000 endpoints?
+
+════════════════════════════════════════
+SEQUENCE FOR THIS SESSION:
+════════════════════════════════════════
+Start Task 5 (pitch) in the BACKGROUND first —
+it has zero code dependencies and you can write it
+while waiting for anyone.
+
+Then do: Task 1 → Task 2 → Task 3 → Task 4
+Task 3 depends on Task 1 and Task 2 being done.
+Task 4 (status API) can start once Task 3 skeleton exists.
+
+You can begin testing Task 3 (orchestrator) once
+Person B has at least one agent publishing to Kafka.
+Until then, test by publishing mock ThreatReports
+directly to Kafka using this one-liner:
+  python -c "
+  from confluent_kafka import Producer
+  import json, time
+  p = Producer({'bootstrap.servers':'localhost:9092'})
+  r = {'agent_id':'test','timestamp':int(time.time()),
+       'severity':'HIGH','threat_type':'port_scan',
+       'source_ip':'192.168.1.100','destination_ip':'',
+       'mitre_technique_id':'T1046',
+       'mitre_technique_name':'Network Service Discovery',
+       'description':'Test alert','raw_evidence':'Test',
+       'recommended_action':'Block','anomaly_score':0.8,
+       'compound_score':0.0}
+  p.produce('network-monitor-alerts', json.dumps(r).encode())
+  p.flush()
+  print('Test alert sent')
+  "
+
+Give me one task at a time. Start with Task 5 (pitch) and
+Task 1 simultaneously — give pitch first, then Task 1 code.
+Complete code only. No placeholders.
+After each code task: pip install command + verify one-liner.
+```
+
+---
+
+## The shared header — paste this above every new chat window
+
+```
+HACKATHON SESSION RULES — READ BEFORE EVERY RESPONSE:
+1. Give COMPLETE, copy-pasteable code always. Zero placeholders,
+   zero "implement this yourself" comments, zero truncation.
+2. If a library needs installing, give the exact:
+   pip install library1 library2 library3
+3. After every task, give ONE verify command I can run immediately.
+4. If my description has a faster/cleaner approach, implement
+   the better version and tell me what you changed and why.
+5. If I say "next", move immediately — no recap of previous task.
+6. We are on a 3-hour deadline. Every response must be production-ready.
+7. Never say "rest of code follows same pattern" — write every line.
+```
